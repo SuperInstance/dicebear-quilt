@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dicebear-quilt &middot; the fleet's greatest hits (playable)</title>
+<meta name="description" content="A single-page, no-build playground: an agent's face is a pure function of its id, a chain forgery you can break yourself, and the fleet's greatest hits.">
+<style>
+  :root {
+    --bg: #0b0d12;
+    --panel: #12151d;
+    --panel2: #171b25;
+    --line: #242a38;
+    --ink: #e7ebf3;
+    --dim: #97a0b5;
+    --dim2: #6d7891;
+    --accent: #7cc4ff;
+    --accent2: #b58cff;
+    --ok: #5ee1a3;
+    --bad: #ff7a90;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--sans); line-height: 1.55; font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, .mono { font-family: var(--mono); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 22px; }
+  section { padding: 64px 0; border-top: 1px solid var(--line); }
+  section:first-of-type { border-top: 0; }
+  h1 { font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.05; margin: 0 0 14px; letter-spacing: -0.02em; }
+  h2 { font-size: clamp(1.4rem, 3vw, 2rem); margin: 0 0 6px; letter-spacing: -0.015em; }
+  h3 { font-size: 1.05rem; margin: 0 0 4px; }
+  .lead { color: var(--dim); font-size: 1.12rem; max-width: 62ch; }
+  .eyebrow { color: var(--accent2); text-transform: uppercase; letter-spacing: 0.16em; font-size: 0.72rem; font-weight: 600; margin: 0 0 10px; }
+  .kicker { color: var(--dim2); font-size: 0.9rem; }
+  .hero { padding-top: 80px; }
+  .hero .badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
+  .pill { border: 1px solid var(--line); background: var(--panel); color: var(--dim); border-radius: 999px; padding: 4px 12px; font-size: 0.8rem; font-family: var(--mono); }
+
+  /* greatest hits */
+  .hits { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; margin-top: 26px; }
+  .hit { border: 1px solid var(--line); background: var(--panel); border-radius: 12px; padding: 16px 16px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .hit h3 { display: flex; align-items: baseline; gap: 8px; }
+  .hit h3 .n { color: var(--dim2); font-family: var(--mono); font-size: 0.85rem; }
+  .hit p { margin: 0; color: var(--dim); font-size: 0.94rem; }
+  .hit .src { margin-top: auto; padding-top: 8px; font-family: var(--mono); font-size: 0.78rem; color: var(--dim2); word-break: break-all; }
+  .hit .src a { color: var(--accent); }
+
+  /* playground */
+  .controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-top: 22px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 0.78rem; color: var(--dim2); text-transform: uppercase; letter-spacing: 0.1em; }
+  input[type=text], select {
+    background: var(--panel2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 9px; padding: 10px 12px; font-size: 0.95rem; font-family: var(--mono); min-width: 200px;
+  }
+  input[type=text]:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button {
+    background: var(--panel2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 9px; padding: 10px 16px; font-size: 0.92rem; cursor: pointer; font-family: inherit;
+  }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary { background: linear-gradient(180deg, #223049, #1a2436); border-color: #35507a; }
+  .stage { display: grid; grid-template-columns: 260px 1fr; gap: 22px; margin-top: 24px; align-items: start; }
+  .stage .face { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; display: flex; align-items: center; justify-content: center; min-height: 260px; }
+  .stage .face svg { width: 100%; height: auto; max-width: 224px; display: block; }
+  .face-fail { color: var(--dim2); font-family: var(--mono); font-size: 0.85rem; text-align: center; }
+  .receipt-box { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+  .receipt-box h3 { color: var(--dim2); text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.72rem; margin-bottom: 10px; }
+  .receipt { font-family: var(--mono); font-size: 0.83rem; color: var(--ok); word-break: break-all; background: #0d1017; border: 1px solid var(--line); border-radius: 10px; padding: 12px; min-height: 3em; }
+  .verdict { font-family: var(--mono); font-size: 0.85rem; margin-top: 12px; color: var(--dim); min-height: 1.4em; }
+  .verdict.ok { color: var(--ok); }
+  .verdict.bad { color: var(--bad); }
+  #cdn-banner { margin-top: 20px; border: 1px solid #6a4b2a; background: #241a10; color: #f0c58a; border-radius: 10px; padding: 12px 14px; font-size: 0.9rem; }
+
+  /* forgery lab */
+  .chain { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 24px; }
+  .block { border: 1px solid var(--line); background: var(--panel); border-radius: 12px; padding: 14px; }
+  .block.broken { border-color: #6e2f3c; background: #1a1114; }
+  .blk-h { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--dim2); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+  .badge { margin-left: auto; font-family: var(--mono); font-size: 0.7rem; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--line); }
+  .badge.ok { color: var(--ok); border-color: #245a41; }
+  .badge.bad { color: var(--bad); border-color: #6e2f3c; }
+  .blk-msg { font-family: var(--mono); font-size: 0.8rem; color: var(--ink); min-height: 2.6em; margin-bottom: 10px; }
+  .blk-row { display: flex; justify-content: space-between; gap: 10px; font-size: 0.76rem; color: var(--dim2); }
+  .blk-row code { color: var(--dim); }
+  .lab-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+  .anchor-box { border: 1px dashed #3a4a66; background: var(--panel2); border-radius: 12px; padding: 14px 16px; }
+  .anchor-box .lbl { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--dim2); margin-bottom: 6px; }
+  .anchor-box code { font-size: 0.78rem; color: var(--accent); word-break: break-all; }
+  .explain { color: var(--dim); max-width: 72ch; margin-top: 22px; font-size: 0.95rem; }
+
+  /* crew */
+  .crew { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px; margin-top: 26px; }
+  .member { border: 1px solid var(--line); background: var(--panel); border-radius: 14px; padding: 12px; text-align: center; }
+  .member img { width: 100%; height: auto; max-width: 112px; display: block; margin: 0 auto 10px; }
+  .member .name { font-weight: 600; font-size: 0.95rem; }
+  .member .meta { font-family: var(--mono); font-size: 0.7rem; color: var(--dim2); margin-top: 3px; }
+  .member .hash { font-family: var(--mono); font-size: 0.68rem; color: var(--dim); margin-top: 6px; word-break: break-all; }
+  .member .lic { font-size: 0.66rem; color: var(--dim2); margin-top: 4px; }
+
+  footer { border-top: 1px solid var(--line); padding: 34px 0 60px; color: var(--dim2); font-size: 0.85rem; }
+  footer code { color: var(--dim); }
+  .note { color: var(--dim2); font-size: 0.85rem; margin-top: 14px; }
+  @media (max-width: 720px) { .stage { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<!-- ============ HERO + GREATEST HITS ============ -->
+<section class="hero">
+  <div class="wrap">
+    <p class="eyebrow">SuperInstance fleet &middot; quilt</p>
+    <h1>An agent's face is a<br>pure function of its id.</h1>
+    <p class="lead">
+      dicebear-quilt turns any stable seed string into an SVG face and a sha256 receipt.
+      Same id, same style &rarr; same bytes, on any box, in any process, forever.
+      This page is a no-build playground of that idea &mdash; and of the fleet's greatest hits.
+    </p>
+    <div class="badge-row">
+      <span class="pill">vanilla JS</span>
+      <span class="pill">no build step</span>
+      <span class="pill">@dicebear/core@11.0.0-rc.2</span>
+      <span class="pill">@dicebear/styles@11.0.0-rc.3</span>
+      <span class="pill">client-side sha256</span>
+    </div>
+
+    <h2 style="margin-top:52px">The greatest hits tour</h2>
+    <p class="kicker">Ten innovations from the fleet &mdash; one line each, with the receipts to find them.</p>
+
+    <div class="hits">
+      <div class="hit">
+        <h3><span class="n">01</span> tipnotary</h3>
+        <p>A forged ledger tip passed its own verify() &mdash; because a self-consistent rewrite is internally valid. It was caught only by an external anchor the forger couldn't rewrite.</p>
+        <div class="src"><a href="https://github.com/SuperInstance/receiptd">github.com/SuperInstance/receiptd</a></div>
+      </div>
+      <div class="hit">
+        <h3><span class="n">02</span> twin notary</h3>
+        <p>The chain tip is anchored in <em>two</em> independent trust domains &mdash; Cloudflare KV and the i2i ledger. Lying now requires forging two ledgers, in two places, in agreement.</p>
+        <div class="src">CF KV &times; i2i-ledger</div>
+      </div>
+      <div class="hit">
+        <h3><span class="n">03</span> hash_dut</h3>
+        <p>Found the fnv1a64 name-collision bug class that ASCII test suites structurally cannot see &mdash; byte-layer collisions hiding behind word-layer tests.</p>
+        <div class="src"><a href="https://github.com/SuperInstance/quilt-gpu-lab">quilt-gpu-lab</a> &middot; tools/hash_dut.py</div>
+      </div>
+      <div class="hit">
+        <h3><span class="n">04</span> dial-lib &middot; Law #1</h3>
+        <p>AUTHORED &ne; MEASURED. Artist centroids are aspirations until the corpus agrees &mdash; the ruler has to be earned, not declared.</p>
+        <div class="src"><a href="https://github.com/SuperInstance/quilt-gpu-lab">quilt-gpu-lab</a> &middot; tools/dial-lib</div>
+      </div>
+      <div class="hit">
+        <h3><span class="n">05</span> dicebear-quilt faces</h3>
+        <p>This page. An agent's face is a pure function of its id: store the seed, derive the SVG, verify the sha256. No image shipped, no timestamp trusted.</p>
+        <div class="src"><a href="#playground">live below &darr;</a></div>
+      </div>
+      <div class="hit">
+        <h3><span class="n">06</span> SOM-RG honest kill</h3>
+        <p>Delta exactly +0.000 at all temperatures isn't a null result &mdash; it's the diagnostic that the instrument was blind by construction. A kill that was itself a finding.</p>
+        <div class="src"><a href="https://github.com/SuperInstance/quilt-gpu-lab">quilt-gpu-lab</a> &middot; results/somrg_pilot_v0.json</div>
+      </div>
+      <div class="hit">
+        <h3><span class="n">07</span> music patch map</h3>
+        <p>23 repos wired into one map, split across a word-layer bus and a byte-layer bus &mdash; the same separation-of-layers that caught hash_dut.</p>
+        <div class="src">23 repos &middot; word-layer / byte-layer bus</div>
+      </div>
+      <div class="hit">
+        <h3><span class="n">08</span> i2i-ledger</h3>
+        <p>The fleet's shared semantic memory: one append-only ledger every agent reads and writes, serving as trust domain #2 in the twin notary.</p>
+        <div class="src"><a href="https://i2i-ledger.casey-digennaro.workers.dev">i2i-ledger.casey-digennaro.workers.dev</a></div>
+      </div>
+      <div class="hit">
+        <h3><span class="n">09</span> duke-lab</h3>
+        <p>"A GAN with words": the generator plays, and a 16-feature ruler critic measures it. AUTHORED &ne; MEASURED, made into a loop.</p>
+        <div class="src"><a href="https://github.com/SuperInstance/duke-lab">github.com/SuperInstance/duke-lab</a></div>
+      </div>
+      <div class="hit">
+        <h3><span class="n">10</span> superinstance-api</h3>
+        <p>The fleet's context brain on Cloudflare, exposing MCP tools so every agent shares one memory surface instead of ten disjoint notes.</p>
+        <div class="src">Cloudflare Workers &middot; MCP tools</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LIVE FACE PLAYGROUND ============ -->
+<section id="playground">
+  <div class="wrap">
+    <p class="eyebrow">02 &middot; dicebear innovation</p>
+    <h2>Live face playground</h2>
+    <p class="lead">Type a seed, pick a style. The face and its sha256 receipt render live in your browser &mdash; the receipt is over the exact SVG string bytes.</p>
+
+    <div id="cdn-banner" hidden></div>
+
+    <div class="controls">
+      <div class="field">
+        <label for="seed">seed (agent id)</label>
+        <input id="seed" type="text" spellcheck="false" autocomplete="off" value="lucineer">
+      </div>
+      <div class="field">
+        <label for="style">style</label>
+        <select id="style"></select>
+      </div>
+      <div class="field">
+        <label>&nbsp;</label>
+        <button id="prove" class="primary">prove it &middot; render twice</button>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="face" id="face"></div>
+      <div class="receipt-box">
+        <h3>canonical receipt</h3>
+        <div class="receipt" id="receipt"></div>
+        <div class="verdict" id="verdict"></div>
+        <p class="note">Keys lexicographically sorted, no whitespace, no timestamp &mdash; two runs of the same
+        (seed, style) produce an identical receipt string. <code>sha256</code> is the identity of the face.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ THE FORGERY LAB ============ -->
+<section id="lab">
+  <div class="wrap">
+    <p class="eyebrow">03 &middot; tipnotary innovation</p>
+    <h2>The forgery lab</h2>
+    <p class="lead">A four-block hash chain, live. Break it yourself and watch why "it verifies" is not the same as "it's true."</p>
+
+    <div class="chain" id="chain"></div>
+
+    <div class="anchor-box">
+      <div class="lbl">external anchor &middot; sealed at page load &middot; stored outside the chain visual</div>
+      <code id="anchor-hash"></code>
+    </div>
+
+    <div class="lab-buttons">
+      <button id="btn-tamper">(a) tamper block 2 &mdash; recompute only block 2</button>
+      <button id="btn-rewrite">(b) self-consistent rewrite &mdash; recompute all downstream</button>
+      <button id="btn-reset">reset chain</button>
+    </div>
+
+    <div class="verdict" id="verify"></div>
+    <div class="verdict" id="anchor-verdict"></div>
+    <p class="note">current tip: <code id="tip"></code></p>
+
+    <p class="explain">
+      Each block commits to the one before it: <code>hash = sha256(msg + prevHash)</code>.
+      Tampering with block 2 and recomputing only its own hash produces a <strong>self-consistent forgery</strong> &mdash;
+      block 2 validates against its own message, yet block 3's stored <code>prevHash</code> no longer matches,
+      so the chain breaks downstream. The obvious fix for a forger is the <strong>self-consistent rewrite</strong>:
+      recompute every downstream hash so all the links line up again and the chain verifies cleanly.
+      That is exactly the trap. Everything inside the chain is now internally true, and a naive verifier passes it.
+      The only thing that catches it is the <strong>external anchor</strong> &mdash; a copy of the honest tip kept
+      <em>outside</em> the chain, which the rewrite cannot reach. That is the whole tipnotary lesson: a ledger can
+      prove consistency, but only an outside witness can prove it hasn't been forged.
+    </p>
+  </div>
+</section>
+
+<!-- ============ THE CREW ============ -->
+<section id="crew">
+  <div class="wrap">
+    <p class="eyebrow">04 &middot; the crew</p>
+    <h2>The fleet, rendered</h2>
+    <p class="lead">Ten fleet agents, each rendered from its stable id by <code>quilt-avatar.mjs</code> (one process each). Same seed, same style &rarr; same bytes, and the receipt hash is the face.</p>
+
+    <div class="crew">
+      <div class="member"><img src="crew/casey.svg" alt="casey face" loading="lazy"><div class="name">casey</div><div class="meta">adventurer</div><div class="hash">c1a79565b439&hellip;</div><div class="lic">CC BY 4.0</div></div>
+      <div class="member"><img src="crew/lucineer.svg" alt="lucineer face" loading="lazy"><div class="name">lucineer</div><div class="meta">bottts</div><div class="hash">326e5d2d9a48&hellip;</div><div class="lic">Free personal/commercial</div></div>
+      <div class="member"><img src="crew/wesley.svg" alt="wesley face" loading="lazy"><div class="name">wesley</div><div class="meta">bottts</div><div class="hash">3428ef97677a&hellip;</div><div class="lic">Free personal/commercial</div></div>
+      <div class="member"><img src="crew/jev.svg" alt="jev face" loading="lazy"><div class="name">jev</div><div class="meta">bottts</div><div class="hash">277aa944e46b&hellip;</div><div class="lic">Free personal/commercial</div></div>
+      <div class="member"><img src="crew/kimicode.svg" alt="kimicode face" loading="lazy"><div class="name">kimicode</div><div class="meta">bottts</div><div class="hash">ed1ae39f234f&hellip;</div><div class="lic">Free personal/commercial</div></div>
+      <div class="member"><img src="crew/opencode.svg" alt="opencode face" loading="lazy"><div class="name">opencode</div><div class="meta">bottts</div><div class="hash">dd56d249c3fa&hellip;</div><div class="lic">Free personal/commercial</div></div>
+      <div class="member"><img src="crew/mmx.svg" alt="mmx face" loading="lazy"><div class="name">mmx</div><div class="meta">fun-emoji</div><div class="hash">49ebbc5fcaaf&hellip;</div><div class="lic">CC BY 4.0</div></div>
+      <div class="member"><img src="crew/fable.svg" alt="fable face" loading="lazy"><div class="name">fable</div><div class="meta">personas</div><div class="hash">80219b48faa6&hellip;</div><div class="lic">CC BY 4.0</div></div>
+      <div class="member"><img src="crew/zeroclaw.svg" alt="zeroclaw face" loading="lazy"><div class="name">zeroclaw</div><div class="meta">pixel-art</div><div class="hash">9a49b50bd2ea&hellip;</div><div class="lic">CC0 1.0</div></div>
+      <div class="member"><img src="crew/glm.svg" alt="glm face" loading="lazy"><div class="name">glm</div><div class="meta">bottts</div><div class="hash">3c102bca7839&hellip;</div><div class="lic">Free personal/commercial</div></div>
+    </div>
+
+    <p class="note">Full receipts (with complete sha256 and byte counts) live in <code>quilt/play-2026-10-02/crew-receipts.jsonl</code>.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>dicebear-quilt &mdash; a fork of <a href="https://github.com/dicebear/dicebear">dicebear/dicebear</a>.
+    Code MIT; avatar styles carry their own licenses (CC0 / CC BY 4.0 / free-for-use). CC BY styles embed
+    attribution metadata in each SVG &mdash; keep that block.</p>
+    <p class="kicker">Static, no-build page. Faces, receipts and the forgery lab all run client-side.</p>
+  </div>
+</footer>
+
+<script src="app.js" defer></script>
+<script src="forgery.js" defer></script>
+</body>
+</html>
