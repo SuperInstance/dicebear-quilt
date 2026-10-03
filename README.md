@@ -1,119 +1,126 @@
-<h1><img src="https://www.dicebear.com/logo-readme.svg" width="28" /> DiceBear Avatar Library</h1>
+<h1><img src="https://www.dicebear.com/logo-readme.svg" width="28" /> dicebear-quilt</h1>
 
-<p>
-  <img src="https://www.dicebear.com/readme-hero.svg" alt="A grid of DiceBear avatars in twenty-four different styles" width="100%" />
-</p>
+**A fork of [dicebear/dicebear](https://github.com/dicebear/dicebear) that adds
+`quilt/` — a deterministic, receipt-emitting face generator for the fleet.**
 
-[![npm](https://www.dicebear.com/badges/npm.svg)](https://www.npmjs.com/package/@dicebear/core)
-[![stars](https://www.dicebear.com/badges/stars.svg)](https://github.com/dicebear/dicebear/stargazers)
-[![license](https://www.dicebear.com/badges/license.svg)](./LICENSE)
+Upstream is the DiceBear avatar library, MIT licensed (© Florian Körner). This
+fork tracks upstream branch `11.x` and is **additive**: it adds a `quilt/`
+directory and a rebuilt README; the upstream README is preserved verbatim as
+[`README.upstream.md`](./README.upstream.md). All upstream code, packages, and
+the seven language ports are unchanged, and the MIT license
+([`LICENSE`](./LICENSE)) still governs.
 
-DiceBear is an open source avatar library. It turns any seed string (a username
-or an email address, for example) into an SVG avatar in one of 63 styles, from
-hand-drawn characters to abstract patterns. The same seed always produces the
-same avatar, so you store a string instead of an image and never ask users to
-upload a profile picture.
+## What DiceBear is (three lines)
 
-Avatars are customizable through style options: colors, backgrounds, rotation,
-individual features like hair or glasses.
+DiceBear turns any seed string — a username, an email, an agent id — into an SVG
+avatar in one of 63 styles. The same seed always produces the same avatar, so
+you store a string instead of an image. Avatars are customizable through style
+options: colors, background, rotation, individual features.
 
-[Playground](https://www.dicebear.com/playground) |
-[Documentation](https://www.dicebear.com/start/what-is-dicebear/) |
-[Editor](https://editor.dicebear.com)
+Upstream lives at [dicebear/dicebear](https://github.com/dicebear/dicebear) and
+[dicebear.com](https://www.dicebear.com); the styles are a separate repository,
+[`dicebear/styles`](https://github.com/dicebear/styles), shipped here as the
+`@dicebear/styles` npm package.
 
-## One library, seven languages
+## The QUILT TOOL
 
-DiceBear 10 ships as native libraries for JavaScript, PHP, Python, Rust, Go,
-Dart, and C#. Every port passes a shared test suite that requires byte-identical
-SVG output to the JavaScript reference. Generate an avatar in the browser,
-regenerate it later in a Go or PHP backend, and you get the same bytes.
+Fleet agents are long-lived and headless: they have stable ids but not faces.
+`quilt` closes that gap. An agent's face is a **pure function of its id** — you
+store the id string and derive the SVG bytes whenever you need them. Same id,
+same style ⇒ same bytes, on any box, in any process, forever. The receipt's
+`sha256` is the face's identity, so a face can be verified without shipping an
+image or trusting a timestamp.
 
-| Language                | Package                                                                 | Install                                      |
-| ----------------------- | ----------------------------------------------------------------------- | -------------------------------------------- |
-| JavaScript / TypeScript | [`@dicebear/core`](https://www.npmjs.com/package/@dicebear/core)        | `npm install @dicebear/core`                 |
-| PHP                     | [`dicebear/core`](https://packagist.org/packages/dicebear/core)         | `composer require dicebear/core`             |
-| Python                  | [`dicebear-core`](https://pypi.org/project/dicebear-core/)              | `pip install dicebear-core`                  |
-| Rust                    | [`dicebear-core`](https://crates.io/crates/dicebear-core)               | `cargo add dicebear-core`                    |
-| Go                      | [`dicebear-go`](https://pkg.go.dev/github.com/dicebear/dicebear-go/v11) | `go get github.com/dicebear/dicebear-go/v11` |
-| Dart                    | [`dicebear_core`](https://pub.dev/packages/dicebear_core)               | `dart pub add dicebear_core`                 |
-| C#                      | [`DiceBear.Core`](https://www.nuget.org/packages/DiceBear.Core)         | `dotnet add package DiceBear.Core`           |
+### Quickstart
 
-In JavaScript it looks like this; the
-[documentation](https://www.dicebear.com/start/what-is-dicebear/) has the
-equivalent for each language:
+```sh
+# once, to wire the workspace dep (builds @dicebear/core)
+npm install && npm --workspace src/js/core run build
+
+# render a face, write the SVG, print a receipt
+node quilt/quilt-avatar.mjs --seed agent-0001 --style initials --out face.svg --json
+
+# or stream the SVG straight to stdout (no receipt)
+node quilt/quilt-avatar.mjs --seed agent-0001 --style initials
+```
+
+Programmatic use (same determinism, engine imported directly):
 
 ```js
 import { Avatar, Style } from '@dicebear/core';
-import definition from '@dicebear/styles/lorelei.json' with { type: 'json' };
+import definition from '@dicebear/styles/initials.json' with { type: 'json' };
 
-const avatar = new Avatar(new Style(definition), {
-  seed: 'John',
-  size: 128,
-});
-
-avatar.toString(); // SVG string
-avatar.toDataUri(); // data:image/svg+xml;charset=utf-8,...
+const face = new Avatar(new Style(definition), { seed: 'agent-0001' });
+face.toString(); // SVG string — byte-identical to the CLI output
 ```
 
-The 63 avatar styles are plain JSON definitions from the
-[`dicebear/styles`](https://github.com/dicebear/styles) repository, available as
-a package for each language. You can also
-[create your own style](https://www.dicebear.com/create-styles/with-figma/),
-with Figma or from scratch.
+### Receipt format
 
-## Without writing code
+Canonical JSON: keys lexicographically sorted, no whitespace, **no timestamp**.
+A real receipt from the shipped selftest:
 
-- The [HTTP API](https://www.dicebear.com/integrations/http-api/) returns
-  avatars from a plain URL, free and without an account:
-  `https://api.dicebear.com/10.x/lorelei/svg?seed=Felix`. For full control and
-  privacy you can
-  [host it yourself](https://www.dicebear.com/recipes/self-host-the-http-api/)
-  with a single Docker container.
-- The [CLI](https://www.dicebear.com/integrations/cli/) prints an avatar to the
-  terminal or generates files in bulk:
-  `npx dicebear create lorelei -o ./avatars --count 10`.
-- The [editor](https://editor.dicebear.com) lets you assemble a single avatar by
-  hand and export it.
+```json
+{"bytes":1387,"license":"CC0 1.0","seed":"agent-0001","sha256":"14e1ecf8594f3e01ff501411f360b4b20330236ed2944988f38c754df89a1d18","style":"initials","styleVersion":"11.0.0-rc.3","tool":"quilt-avatar"}
+```
 
-## This repository
+| field          | meaning                                                   |
+| -------------- | --------------------------------------------------------- |
+| `tool`         | always `quilt-avatar`                                     |
+| `seed`         | the seed string that was rendered                         |
+| `style`        | the style name that was rendered                          |
+| `license`      | the style's license name (see attribution note)           |
+| `sha256`       | SHA-256 of the exact SVG bytes — the identity of the face |
+| `bytes`        | length of the SVG in bytes                                |
+| `styleVersion` | `@dicebear/styles` version the definition came from       |
 
-This monorepo contains the seven core libraries, the CLI, the SVG-to-raster
-converter, the documentation site ([dicebear.com](https://www.dicebear.com)),
-and the editor. Related projects live in their own repositories:
+Because the receipt has no timestamp and is canonically serialized, two runs of
+the same `(seed, style)` produce **identical receipts**. `rc=2` on a missing or
+empty `--seed` and on an unknown `--style` (which lists the 63 available
+styles).
 
-- [`dicebear/styles`](https://github.com/dicebear/styles): the official avatar
-  style definitions
-- [`dicebear/schema`](https://github.com/dicebear/schema): the JSON Schema
-  behind definitions and options
-- [`dicebear/api`](https://github.com/dicebear/api): the self-hostable HTTP API
-- [`dicebear/studio`](https://github.com/dicebear/studio): DiceBear Studio, the
-  plugin for Figma for style authors
+### Style licenses — attribution
 
-Contributions are welcome; [CONTRIBUTING.md](./CONTRIBUTING.md) explains the
-setup and where each kind of change belongs.
+The **code is MIT**. The **styles are not** — each carries its own license,
+repeated in the definition's `meta.license` and in
+[`node_modules/@dicebear/styles/LICENSE.md`](https://github.com/dicebear/styles).
+Across the 63 built-in styles: 44 are **CC0 1.0** (public domain, no
+attribution), 14 are **CC BY 4.0** (attribution required — e.g. `adventurer`,
+`croodles`, `dylan`, `fun-emoji`, `personas`, `toon-head`), 4 are "free for
+personal and commercial use" (`avataaars`, `bottts`), and 1 is MIT. For CC BY
+styles the renderer embeds the attribution as RDF/Dublin-Core `<metadata>` in
+each SVG — keep that block. Prefer a CC0 style (`initials`, `lorelei`,
+`identicon`, `shapes`) when attribution is inconvenient. The receipt's `license`
+field always tells you which regime you rendered under.
+
+### More
+
+- [`quilt/PATCH.md`](./quilt/PATCH.md) — the quilt patch manifest (kind, input,
+  output, interface, `receipt_verb: rendered`).
+- [`quilt/README.md`](./quilt/README.md) — architecture of the quilt face,
+  A2A usage for headless agents, batch fleet identity generation, and optional
+  receipt anchoring via a `receiptd` chain.
+- [`quilt/SELFTEST-2026-10-02.md`](./quilt/SELFTEST-2026-10-02.md) — the
+  byte-identity proof: 3 seeds × 3 styles rendered twice in separate processes,
+  all byte-identical, plus the fail-loud checks.
+
+### Reproduce the proof
+
+```sh
+node --check quilt/quilt-avatar.mjs
+node quilt/quilt-selftest.mjs
+```
+
+## Upstream
+
+Everything outside `quilt/` is upstream DiceBear. See
+[`README.upstream.md`](./README.upstream.md) for the original project overview,
+the seven-language port table, and the full documentation links
+([dicebear.com](https://www.dicebear.com), [playground](https://www.dicebear.com/playground),
+[editor](https://editor.dicebear.com)).
 
 ## License
 
 The code is [MIT licensed](./LICENSE), including commercial use. The avatar
 styles are the work of their respective creators and carry their own licenses;
-the [license overview](https://www.dicebear.com/licenses/) lists them all, and
-many only ask for attribution.
-
-## Star this repository
-
-If DiceBear saved you some work, a star makes the project easier to find for the
-next person looking for an avatar library. The
-[support page](https://www.dicebear.com/support/) lists the other ways to help.
-
-## Sponsors
-
-Advertisement: Many thanks to our sponsors who provide us with free or
-discounted products.
-
-<a href="https://bunny.net/" target="_blank" rel="noopener noreferrer">
-    <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="https://www.dicebear.com/sponsors/bunny-light.svg">
-        <source media="(prefers-color-scheme: light)" srcset="https://www.dicebear.com/sponsors/bunny-dark.svg">
-        <img alt="bunny.net" src="https://www.dicebear.com/sponsors/bunny-dark.svg" height="64">
-    </picture>
-</a>
+[a full overview](https://www.dicebear.com/licenses/) lists them all. This fork
+keeps the same MIT terms.
